@@ -10,11 +10,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.aydsii.calculadora.model.Libro;
 import com.aydsii.calculadora.service.LibroService;
+
+import jakarta.validation.Valid;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,9 +40,23 @@ public class LibroController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar todos los libros", description = "Devuelve el catálogo completo")
-    public List<Libro> listar() {
-        return libroService.listarTodos();
+    @Operation(summary = "Listar libros",
+            description = "Devuelve el catálogo. Todos los filtros son opcionales y se combinan con AND; "
+                    + "sin ningún filtro devuelve todos los libros.")
+    public List<Libro> listar(
+            @Parameter(description = "Filtra por título (contiene, sin distinguir mayúsculas)")
+            @RequestParam(required = false) String titulo,
+            @Parameter(description = "Filtra por autor (contiene, sin distinguir mayúsculas)")
+            @RequestParam(required = false) String autor,
+            @Parameter(description = "Filtra por género (contiene, sin distinguir mayúsculas)")
+            @RequestParam(required = false) String genero,
+            @Parameter(description = "Si es true, devuelve solo libros con cantidadDisponibles > 0")
+            @RequestParam(required = false) Boolean soloDisponibles,
+            @Parameter(description = "Campo por el que ordenar: titulo, autor, genero o cantidadDisponibles")
+            @RequestParam(required = false) String ordenarPor,
+            @Parameter(description = "Dirección del orden")
+            @RequestParam(required = false, defaultValue = "asc") String orden) {
+        return libroService.buscar(titulo, autor, genero, soloDisponibles, ordenarPor, "desc".equalsIgnoreCase(orden));
     }
 
     @GetMapping("/{isbn}")
@@ -57,9 +74,10 @@ public class LibroController {
     @Operation(summary = "Crear un libro", description = "Agrega un libro nuevo al catálogo")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Libro creado"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos (ver Bean Validation en Libro)"),
             @ApiResponse(responseCode = "409", description = "Ya existe un libro con ese ISBN")
     })
-    public Libro crear(@RequestBody Libro libro) {
+    public Libro crear(@Valid @RequestBody Libro libro) {
         return libroService.crear(libro);
     }
 
@@ -67,10 +85,11 @@ public class LibroController {
     @Operation(summary = "Editar un libro", description = "Actualiza los datos de un libro existente")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Libro actualizado"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos (ver Bean Validation en Libro)"),
             @ApiResponse(responseCode = "404", description = "No existe un libro con ese ISBN")
     })
     public Libro actualizar(@Parameter(description = "ISBN del libro") @PathVariable String isbn,
-            @RequestBody Libro libro) {
+            @Valid @RequestBody Libro libro) {
         return libroService.actualizar(isbn, libro);
     }
 

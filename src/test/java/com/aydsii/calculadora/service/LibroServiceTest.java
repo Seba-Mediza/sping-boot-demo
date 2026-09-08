@@ -28,6 +28,62 @@ class LibroServiceTest {
     }
 
     @Test
+    void buscarSinFiltrosDevuelveTodos() {
+        assertThat(libroService.buscar(null, null, null, null, null, false)).hasSize(5);
+    }
+
+    @Test
+    void buscarPorTituloEsParcialYSinDistinguirMayusculas() {
+        assertThat(libroService.buscar("años", null, null, null, null, false))
+                .extracting(Libro::getTitulo)
+                .containsExactly("Cien años de soledad");
+    }
+
+    @Test
+    void buscarPorAutorYGeneroCombinaLosFiltros() {
+        assertThat(libroService.buscar(null, "orwell", "distopía", null, null, false))
+                .extracting(Libro::getIsbn)
+                .containsExactly("978-0451524935");
+    }
+
+    @Test
+    void buscarConSoloDisponiblesExcluyeLosQueTienenCantidadCero() {
+        libroService.actualizar("978-0451524935",
+                new Libro("1984", "George Orwell", "978-0451524935", "Distopía", 0));
+
+        assertThat(libroService.buscar(null, null, null, true, null, false))
+                .extracting(Libro::getIsbn)
+                .doesNotContain("978-0451524935")
+                .hasSize(4);
+    }
+
+    @Test
+    void buscarSinResultadosDevuelveListaVacia() {
+        assertThat(libroService.buscar("no-existe", null, null, null, null, false)).isEmpty();
+    }
+
+    @Test
+    void buscarOrdenaPorTituloAscendente() {
+        assertThat(libroService.buscar(null, null, null, null, "titulo", false))
+                .extracting(Libro::getTitulo)
+                .containsExactly("1984", "Cien años de soledad", "El nombre del viento",
+                        "El principito", "Fahrenheit 451");
+    }
+
+    @Test
+    void buscarOrdenaPorCantidadDisponiblesDescendente() {
+        assertThat(libroService.buscar(null, null, null, null, "cantidadDisponibles", true))
+                .extracting(Libro::getCantidadDisponibles)
+                .containsExactly(10, 8, 5, 3, 2);
+    }
+
+    @Test
+    void buscarConCampoDeOrdenInvalidoLanzaIllegalArgumentException() {
+        assertThatThrownBy(() -> libroService.buscar(null, null, null, null, "paginas", false))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void obtenerDevuelveElLibroConEseIsbn() {
         Libro libro = libroService.obtener("978-0451524935");
 

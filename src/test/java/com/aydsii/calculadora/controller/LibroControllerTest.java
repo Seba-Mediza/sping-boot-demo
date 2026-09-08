@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,13 +44,38 @@ class LibroControllerTest {
 
     @Test
     void listarDevuelve200YLaListaDeLibros() throws Exception {
-        given(libroService.listarTodos())
+        given(libroService.buscar(null, null, null, null, null, false))
                 .willReturn(List.of(new Libro("1984", "George Orwell", "978-0451524935", "Distopía", 8)));
 
         mockMvc.perform(get("/api/libros"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].titulo").value("1984"))
                 .andExpect(jsonPath("$[0].isbn").value("978-0451524935"));
+    }
+
+    @Test
+    void listarPasaLosFiltrosYElOrdenAlServicio() throws Exception {
+        given(libroService.buscar("1984", null, "Distopía", true, "titulo", true))
+                .willReturn(List.of(new Libro("1984", "George Orwell", "978-0451524935", "Distopía", 8)));
+
+        mockMvc.perform(get("/api/libros")
+                        .param("titulo", "1984")
+                        .param("genero", "Distopía")
+                        .param("soloDisponibles", "true")
+                        .param("ordenarPor", "titulo")
+                        .param("orden", "desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].isbn").value("978-0451524935"));
+    }
+
+    @Test
+    void listarConCampoDeOrdenInvalidoDevuelve400() throws Exception {
+        given(libroService.buscar(null, null, null, null, "paginas", false))
+                .willThrow(new IllegalArgumentException("No se puede ordenar por 'paginas'."));
+
+        mockMvc.perform(get("/api/libros").param("ordenarPor", "paginas"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("No se puede ordenar por 'paginas'."));
     }
 
     @Test
@@ -79,6 +105,30 @@ class LibroControllerTest {
         mockMvc.perform(post("/api/libros").contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.titulo").value("1984"));
+    }
+
+    @Test
+    void crearConTituloVacioDevuelve400YElErrorDelCampo() throws Exception {
+        String bodyInvalido = """
+                {"titulo":"  ","autor":"George Orwell","isbn":"978-0451524935","genero":"Distopía","cantidadDisponibles":8}
+                """;
+
+        mockMvc.perform(post("/api/libros").contentType(MediaType.APPLICATION_JSON).content(bodyInvalido))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.titulo").value("El título es obligatorio"));
+
+        verifyNoInteractions(libroService);
+    }
+
+    @Test
+    void crearConCantidadNegativaDevuelve400() throws Exception {
+        String bodyInvalido = """
+                {"titulo":"1984","autor":"George Orwell","isbn":"978-0451524935","genero":"Distopía","cantidadDisponibles":-1}
+                """;
+
+        mockMvc.perform(post("/api/libros").contentType(MediaType.APPLICATION_JSON).content(bodyInvalido))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.cantidadDisponibles").value("La cantidad disponible no puede ser negativa"));
     }
 
     @Test
