@@ -16,8 +16,9 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Calculadora API")
-                        .description("API REST de demo (patrón MVC): operaciones aritméticas básicas "
-                                + "y un CRUD de libros con almacenamiento en memoria")
+                        .description("API REST de demo (patrón MVC): operaciones aritméticas básicas, "
+                                + "un CRUD de libros y un conversor de divisas con almacenamiento en memoria, "
+                                + "y alta de clientes con validación de datos (Bean Validation)")
                         .version("1.0.0"));
     }
 }

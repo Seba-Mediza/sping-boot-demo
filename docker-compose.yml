@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: docker.io/library/mysql:8.4
+    container_name: calculadora-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: calculadora
+      MYSQL_USER: calculadora
+      MYSQL_PASSWORD: calculadora
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - calculadora-mysql-data:/var/lib/mysql
+
+volumes:
+  calculadora-mysql-data:
