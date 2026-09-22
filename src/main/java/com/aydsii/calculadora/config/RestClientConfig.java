@@ -11,9 +11,10 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
 
-    // Servicio externo que se consulta para (simular) las tasas de cambio.
-    // El ejercicio usa https://api.frankfurter.app; aquí se reemplaza por jsonplaceholder.
-    private static final String BASE_URL = "https://jsonplaceholder.typicode.com";
+    // API pública y gratuita de tasas de cambio (TP Spring, Ejercicio 3). El dominio histórico
+    // api.frankfurter.app redirige (301) a api.frankfurter.dev/v1; se apunta directo al nuevo
+    // dominio para no depender de ese redirect.
+    private static final String BASE_URL = "https://api.frankfurter.dev/v1";
 
     // @Bean: registra un RestClient ya configurado (baseUrl + timeouts) para inyectarlo en el service.
     @Bean

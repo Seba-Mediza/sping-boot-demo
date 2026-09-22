@@ -2,7 +2,6 @@ package com.aydsii.calculadora.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.within;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
@@ -22,11 +21,8 @@ import com.aydsii.calculadora.model.ConversionDivisa;
 
 class DivisaServiceTest {
 
-    private static final String POSTS_JSON = """
-            [
-              {"userId":1,"id":1,"title":"a","body":"b"},
-              {"userId":1,"id":2,"title":"c","body":"d"}
-            ]
+    private static final String FRANKFURTER_JSON = """
+            {"amount":1.0,"base":"USD","date":"2026-09-22","rates":{"EUR":0.8724}}
             """;
 
     private MockRestServiceServer server;
@@ -40,25 +36,25 @@ class DivisaServiceTest {
     }
 
     @Test
-    void convertirConsultaElServicioExternoYArmaLaRespuestaPropia() {
-        server.expect(requestTo("/posts"))
+    void convertirConsultaFrankfurterYArmaLaRespuestaPropia() {
+        server.expect(requestTo("/latest?amount=1&from=USD&to=EUR"))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(POSTS_JSON, MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(FRANKFURTER_JSON, MediaType.APPLICATION_JSON));
 
-        ConversionDivisa resultado = divisaService.convertir(100, "usd", "ars");
+        ConversionDivisa resultado = divisaService.convertir(100, "usd", "eur");
 
         assertThat(resultado.montoOriginal()).isEqualTo(100);
         assertThat(resultado.monedaOrigen()).isEqualTo("USD");
-        assertThat(resultado.monedaDestino()).isEqualTo("ARS");
-        assertThat(resultado.fecha()).isEqualTo(LocalDate.now());
-        assertThat(resultado.tasaCambio()).isPositive();
-        assertThat(resultado.montoConvertido()).isCloseTo(resultado.tasaCambio() * 100, within(1.0));
+        assertThat(resultado.monedaDestino()).isEqualTo("EUR");
+        assertThat(resultado.tasaCambio()).isEqualTo(0.87);
+        assertThat(resultado.montoConvertido()).isEqualTo(87.24);
+        assertThat(resultado.fecha()).isEqualTo(LocalDate.of(2026, 9, 22));
         server.verify();
     }
 
     @Test
-    void convertirLanza502CuandoElServicioExternoDevuelveErrorHttp() {
-        server.expect(requestTo("/posts")).andRespond(withServerError());
+    void convertirLanza502CuandoFrankfurterDevuelveErrorHttp() {
+        server.expect(requestTo("/latest?amount=1&from=USD&to=ARS")).andRespond(withServerError());
 
         assertThatThrownBy(() -> divisaService.convertir(100, "USD", "ARS"))
                 .isInstanceOf(ServicioExternoException.class)
@@ -66,11 +62,14 @@ class DivisaServiceTest {
     }
 
     @Test
-    void convertirLanza502CuandoElServicioExternoNoDevuelveInformacion() {
-        server.expect(requestTo("/posts")).andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+    void convertirLanza502CuandoLaMonedaNoExistePeroLaRespuestaEs200SinLaTasa() {
+        server.expect(requestTo("/latest?amount=1&from=USD&to=XXX"))
+                .andRespond(withSuccess("""
+                        {"amount":1.0,"base":"USD","date":"2026-09-22","rates":{}}
+                        """, MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> divisaService.convertir(100, "USD", "ARS"))
+        assertThatThrownBy(() -> divisaService.convertir(100, "USD", "XXX"))
                 .isInstanceOf(ServicioExternoException.class)
-                .hasMessageContaining("no devolvió información");
+                .hasMessageContaining("no devolvió");
     }
 }

@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.context.MessageSourceResolvable;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -15,7 +16,11 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 
 // @RestControllerAdvice: centraliza el manejo de excepciones de todos los @RestController;
 // cada método @ExceptionHandler traduce una excepción a una respuesta HTTP con su código.
+// Cubre los ejercicios previos al TP Spring (Calculadora, Libros, Clientes, Pedidos), que usan
+// su propio formato de error. @Order(2) lo deja en menor precedencia que TpSpringExceptionHandler
+// para los controllers que ese advice sí cubre (Ventas, Catálogo, Divisas).
 @RestControllerAdvice
+@Order(2)
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ArithmeticException.class)
@@ -46,12 +51,6 @@ public class GlobalExceptionHandler {
                 .map(MessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", mensaje));
-    }
-
-    // Problemas al comunicarse con el servicio externo -> 502 Bad Gateway.
-    @ExceptionHandler(ServicioExternoException.class)
-    public ResponseEntity<Map<String, String>> handleServicioExterno(ServicioExternoException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(LibroNoEncontradoException.class)
